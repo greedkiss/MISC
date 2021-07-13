@@ -103,17 +103,42 @@ int detach(linuxProc target)
 
 int procRead(linuxProc process, int nsize, void* address, void* buffer)
 {
-    long data = 0;
+    // long data = 0;
 
-    if((data = ptrace(PTRACE_PEEKDATA, process.procId, address, NULL)) == -1){
-        perror("read\n");
-        printf("id : %d\n", process.procId);
-        fprintf(stderr, "error %m\n");
+    // if((data = ptrace(PTRACE_PEEKDATA, process.procId, address, NULL)) == -1){
+    //     perror("read");
+    //     return -1;
+    // }
+
+    // printf("output from ptrace is %li", data);
+
+    uint8_t data;
+
+    char maps_dir[100];
+    FILE* maps_fd;
+    long start_addr, end_addr;
+
+    sprintf(maps_dir, "/proc/%d/maps", process.procId);
+
+    if((maps_fd = fopen(maps_dir, "rt")) == NULL){
+        perror("open maps file");
         return -1;
     }
 
-    printf("output from ptrace is %li", data);
+    if(fscanf(maps_fd, "%lx-%lx ", &start_addr, &end_addr) == -1){
+        perror("read maps file");
+        return -1;
+    }
 
+    printf("addr %lx\n", start_addr);
+
+    long addr = start_addr;  
+    for (; addr < end_addr; ++addr)  
+    {  
+        data = ptrace(PTRACE_PEEKTEXT, process.procId, addr, NULL);
+        printf("data = %x , addr = %lx\n" , data , addr) ;  
+    }  
+    
     //pread() also work
     //ssize_t pread(int fd, void *buf, size_t count, off_t offset);
     // char file[50];
